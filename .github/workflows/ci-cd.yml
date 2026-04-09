@@ -23,8 +23,8 @@ jobs:
       - name: Subir container para testes
         run: docker compose up -d
 
-      - name: Rodar testes automatizados
-        run: docker compose exec energia-api mvn test
+      - name: Rodar testes Maven
+        run: mvn test
 
       - name: Derrubar containers
         run: docker compose down
