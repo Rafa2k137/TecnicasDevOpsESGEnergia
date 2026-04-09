@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+    url: ${DB_URL:jdbc:oracle:thin:@//oracle.fiap.com.br:1521/ORCL}
+    username: ${DB_USERNAME:RM559461}
+    password: ${DB_PASSWORD:201104}
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.OracleDialect
+
+server:
+  port: 8080
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG

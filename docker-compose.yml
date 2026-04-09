@@ -1,0 +1,52 @@
+services:
+  # ------------------------------------------------------
+  # 🧩 Banco de Dados Oracle (opcional, local no Docker)
+  # ------------------------------------------------------
+  oracle-db:
+    image: gvenzl/oracle-free:23-slim
+    container_name: oracle-db
+    restart: always
+    ports:
+      - "1521:1521"
+    environment:
+      - ORACLE_PASSWORD=201104
+      - APP_USER=RM559461
+      - APP_USER_PASSWORD=201104
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'SELECT 1 FROM DUAL;' | sqlplus -s RM559461/201104@localhost:1521/FREEPDB1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+
+  # ------------------------------------------------------
+  # ⚡ API Spring Boot (Energia)
+  # ------------------------------------------------------
+  energia-api:
+    build:
+      context: ./app
+      dockerfile: ../Dockerfile
+    container_name: energia-api
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+    environment:
+      # 🔹 Usa Oracle local se estiver rodando, senão o da FIAP
+      DB_URL: ${DB_URL:-jdbc:oracle:thin:@oracle-db:1521/FREEPDB1}
+      DB_USERNAME: ${DB_USERNAME:-RM559461}
+      DB_PASSWORD: ${DB_PASSWORD:-201104}
+      REMOTE_DB_URL: jdbc:oracle:thin:@oracle.fiap.com.br:1521:ORCL
+      SPRING_PROFILES_ACTIVE: default
+    networks:
+      - energia-net
+
+volumes:
+  oracle-data:
+
+networks:
+  energia-net:
+    driver: bridge

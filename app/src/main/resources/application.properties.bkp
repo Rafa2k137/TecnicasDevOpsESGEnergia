@@ -1,0 +1,31 @@
+# ======================================================
+# ? CONFIGURACAO GERAL DO SPRING BOOT
+# ======================================================
+spring.application.name=energia
+server.port=8080
+
+# ======================================================
+# ? CONEXAO COM O BANCO DE DADOS ORACLE
+# (detectado automaticamente em EnergiaApplication.java)
+# ======================================================
+spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
+spring.datasource.username=RM559461
+spring.datasource.password=201104
+spring.datasource.url=${DB_URL:jdbc:oracle:thin:@localhost:1521/FREEPDB1}
+
+# ======================================================
+# ?? CONFIGURACOES DO HIBERNATE / JPA
+# ======================================================
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.OracleDialect
+
+# ======================================================
+# ? CONFIGURACOES DO FLYWAY (DESATIVADO)
+# ======================================================
+spring.flyway.enabled=false
+
+# ======================================================
+# ? Fallback remoto (Oracle FIAP)
+# ======================================================
+app.remote-db=jdbc:oracle:thin:@oracle.fiap.com.br:1521:ORCL

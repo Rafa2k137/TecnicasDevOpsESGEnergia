@@ -1,0 +1,44 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Build da imagem Docker
+        run: docker build -t meu-app .
+
+      - name: Validar docker-compose
+        run: docker-compose config
+
+      - name: Subir container para testes
+        run: docker compose up -d
+
+      - name: Rodar testes automatizados
+        run: docker-compose exec oracle-db pytest || docker-compose exec oracle-db npm test
+
+      - name: Derrubar containers
+        run: docker-compose down
+
+      # Deploy STAGING
+      - name: Deploy para staging
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          echo "Deploy em staging..."
+          # Exemplo: docker push ou ssh para servidor
+
+      # Deploy PRODUÇÃO
+      - name: Deploy para produção
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Deploy em produção..."
+          # Exemplo: docker push + pull no servidor
