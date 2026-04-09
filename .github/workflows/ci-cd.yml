@@ -18,16 +18,16 @@ jobs:
         run: docker build -t meu-app .
 
       - name: Validar docker-compose
-        run: docker-compose config
+        run: docker compose config
 
       - name: Subir container para testes
         run: docker compose up -d
 
       - name: Rodar testes automatizados
-        run: docker-compose exec oracle-db pytest || docker-compose exec oracle-db npm test
+        run: docker compose exec oracle-db pytest || docker compose exec oracle-db npm test
 
       - name: Derrubar containers
-        run: docker-compose down
+        run: docker compose down
 
       # Deploy STAGING
       - name: Deploy para staging
