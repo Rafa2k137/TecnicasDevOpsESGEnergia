@@ -24,7 +24,7 @@ jobs:
         run: docker compose up -d
 
       - name: Rodar testes automatizados
-        run: docker compose exec oracle-db pytest || docker compose exec oracle-db npm test
+        run: docker compose exec energia-api mvn test
 
       - name: Derrubar containers
         run: docker compose down
