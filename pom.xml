@@ -85,7 +85,7 @@
 	</dependencies>
 
 	<build>
-		<!-- 🔹 Garante que o Maven copie o application.properties.bkp -->
+		<!-- Garante que o Maven copie o application.properties.bkp -->
 		<resources>
 			<resource>
 				<directory>src/main/resources</directory>
