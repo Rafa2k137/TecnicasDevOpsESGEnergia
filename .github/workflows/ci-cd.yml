@@ -31,14 +31,14 @@ jobs:
 
       # Deploy STAGING
       - name: Deploy para staging
-        if: github.ref == 'refs/heads/develop'
+        if: github.ref_name == 'develop'
         run: |
           echo "Deploy em staging..."
           # Exemplo: docker push ou ssh para servidor
 
       # Deploy PRODUÇÃO
       - name: Deploy para produção
-        if: github.ref == 'refs/heads/main'
+        if: github.ref_name == 'main'
         run: |
           echo "Deploy em produção..."
           # Exemplo: docker push + pull no servidor
