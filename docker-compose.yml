@@ -1,7 +1,5 @@
 services:
-  # ------------------------------------------------------
-  # 🧩 Banco de Dados Oracle (opcional, local no Docker)
-  # ------------------------------------------------------
+  # Banco de Dados Oracle (Local no Docker)
   oracle-db:
     image: gvenzl/oracle-free:23-slim
     container_name: oracle-db
@@ -20,9 +18,7 @@ services:
     volumes:
       - oracle-data:/opt/oracle/oradata
 
-  # ------------------------------------------------------
-  # ⚡ API Spring Boot (Energia)
-  # ------------------------------------------------------
+  # API Spring Boot (Energia)
   energia-api:
     build:
       context: .
@@ -35,7 +31,7 @@ services:
       oracle-db:
         condition: service_healthy
     environment:
-      # 🔹 Usa Oracle local se estiver rodando, senão o da FIAP
+      # Usa Oracle local se estiver rodando, senão o da FIAP
       DB_URL: ${DB_URL:-jdbc:oracle:thin:@oracle-db:1521/FREEPDB1}
       DB_USERNAME: ${DB_USERNAME:-RM559461}
       DB_PASSWORD: ${DB_PASSWORD:-201104}
