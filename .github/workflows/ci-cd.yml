@@ -31,7 +31,6 @@ jobs:
 
       # Deploy STAGING
       - name: Deploy para staging
-        if: github.ref_name == 'develop'
         run: |
           echo "Deploy em staging..."
           # Exemplo: docker push ou ssh para servidor
