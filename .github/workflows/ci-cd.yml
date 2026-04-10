@@ -37,7 +37,7 @@ jobs:
 
       # Deploy PRODUÇÃO
       - name: Deploy para produção
-        if: github.ref_name == 'main'
+        if: github.ref == 'refs/heads/main'
         run: |
           echo "Deploy em produção..."
           # Exemplo: docker push + pull no servidor
