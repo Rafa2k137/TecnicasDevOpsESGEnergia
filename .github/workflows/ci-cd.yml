@@ -7,7 +7,7 @@ on:
       - develop
 
 jobs:
-  ci-cd:
+  pipeline:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,58 +28,48 @@ jobs:
           cache: maven
 
       # =========================
-      # 3. VALIDAR DOCKER COMPOSE
+      # 3. VALIDAR COMPOSE
       # =========================
       - name: Validar docker-compose
         run: docker compose config
 
       # =========================
-      # 4. SUBIR AMBIENTE LOCAL (CI)
+      # 4. CI - SUBIR AMBIENTE
       # =========================
-      - name: Subir containers (Oracle + API)
+      - name: Subir ambiente (Oracle + API)
         run: docker compose up -d --build
 
-      - name: Aguardar Oracle subir
+      - name: Aguardar Oracle
         run: sleep 30
 
       # =========================
-      # 5. TESTES INTEGRADOS
+      # 5. TESTES
       # =========================
       - name: Rodar testes Maven
         run: mvn test
 
       # =========================
-      # 6. LIMPAR AMBIENTE
+      # 6. LIMPEZA CI
       # =========================
-      - name: Derrubar containers
+      - name: Derrubar ambiente CI
         run: docker compose down
 
       # =========================
-      # 7. DEPLOY STAGING (DEVELOP)
+      # 7. DEPLOY STAGING (SIMULADO)
       # =========================
-      - name: Deploy STAGING (VPS)
+      - name: Deploy STAGING (simulado)
         if: github.ref == 'refs/heads/develop'
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /app/energia
-            git pull origin develop
-            docker compose up -d --build
+        run: |
+          echo "=== DEPLOY STAGING ==="
+          docker compose up -d --build
+          echo "Staging rodando no runner"
 
       # =========================
-      # 8. DEPLOY PRODUÇÃO (MAIN)
+      # 8. DEPLOY PRODUÇÃO (SIMULADO)
       # =========================
-      - name: Deploy PRODUÇÃO (VPS)
+      - name: Deploy PRODUÇÃO (simulado)
         if: github.ref == 'refs/heads/main'
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /app/energia
-            git pull origin main
-            docker compose up -d --build
+        run: |
+          echo "=== DEPLOY PRODUÇÃO ==="
+          docker compose up -d --build
+          echo "Produção rodando no runner"
