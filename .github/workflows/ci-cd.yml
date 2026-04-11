@@ -7,19 +7,13 @@ on:
       - develop
 
 jobs:
-  pipeline:
+  build-test-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # =========================
-      # 1. CHECKOUT
-      # =========================
       - name: Checkout código
         uses: actions/checkout@v3
 
-      # =========================
-      # 2. JAVA SETUP
-      # =========================
       - name: Configurar Java
         uses: actions/setup-java@v4
         with:
@@ -27,49 +21,26 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # =========================
-      # 3. VALIDAR COMPOSE
-      # =========================
       - name: Validar docker-compose
         run: docker compose config
 
-      # =========================
-      # 4. CI - SUBIR AMBIENTE
-      # =========================
-      - name: Subir ambiente (Oracle + API)
+      - name: Subir containers
         run: docker compose up -d --build
 
-      - name: Aguardar Oracle
+      - name: Aguardar banco subir
         run: sleep 30
 
-      # =========================
-      # 5. TESTES
-      # =========================
       - name: Rodar testes Maven
         run: mvn test
 
-      # =========================
-      # 6. LIMPEZA CI
-      # =========================
-      - name: Derrubar ambiente CI
+      - name: Derrubar containers
         run: docker compose down
 
-      # =========================
-      # 7. DEPLOY STAGING (SIMULADO)
-      # =========================
-      - name: Deploy STAGING (simulado)
-        if: github.ref == 'refs/heads/develop'
-        run: |
-          echo "=== DEPLOY STAGING ==="
-          docker compose up -d --build
-          echo "Staging rodando no runner"
+      # Deploy STAGING
+      - name: Deploy para staging
+        run: echo "Deploy em staging..."
 
-      # =========================
-      # 8. DEPLOY PRODUÇÃO (SIMULADO)
-      # =========================
-      - name: Deploy PRODUÇÃO (simulado)
+      # Deploy PRODUÇÃO
+      - name: Deploy para produção
         if: github.ref == 'refs/heads/main'
-        run: |
-          echo "=== DEPLOY PRODUÇÃO ==="
-          docker compose up -d --build
-          echo "Produção rodando no runner"
+        run: echo "Deploy em produção..."
