@@ -14,11 +14,21 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v3
 
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
       - name: Validar docker-compose
         run: docker compose config
 
-      - name: Subir container para testes
+      - name: Subir containers
         run: docker compose up -d --build
+
+      - name: Aguardar banco subir
+        run: sleep 30
 
       - name: Rodar testes Maven
         run: mvn test
@@ -28,13 +38,9 @@ jobs:
 
       # Deploy STAGING
       - name: Deploy para staging
-        run: |
-          echo "Deploy em staging..."
-          # Exemplo: docker push ou ssh para servidor
+        run: echo "Deploy em staging..."
 
       # Deploy PRODUÇÃO
       - name: Deploy para produção
         if: github.ref == 'refs/heads/main'
-        run: |
-          echo "Deploy em produção..."
-          # Exemplo: docker push + pull no servidor
+        run: echo "Deploy em produção..."
