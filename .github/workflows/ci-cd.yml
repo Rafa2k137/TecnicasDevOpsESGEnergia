@@ -14,14 +14,11 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v3
 
-      - name: Build da imagem Docker
-        run: docker build -t meu-app .
-
       - name: Validar docker-compose
         run: docker compose config
 
       - name: Subir container para testes
-        run: docker compose up -d
+        run: docker compose up -d --build
 
       - name: Rodar testes Maven
         run: mvn test
