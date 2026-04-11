@@ -34,12 +34,12 @@ jobs:
         run: docker compose config
 
       # =========================
-      # 4. SUBIR AMBIENTE (API + ORACLE)
+      # 4. SUBIR AMBIENTE LOCAL (CI)
       # =========================
-      - name: Subir containers
+      - name: Subir containers (Oracle + API)
         run: docker compose up -d --build
 
-      - name: Aguardar banco subir
+      - name: Aguardar Oracle subir
         run: sleep 30
 
       # =========================
@@ -49,37 +49,15 @@ jobs:
         run: mvn test
 
       # =========================
-      # 6. DERRUBAR AMBIENTE
+      # 6. LIMPAR AMBIENTE
       # =========================
       - name: Derrubar containers
         run: docker compose down
 
       # =========================
-      # 7. LOGIN NO DOCKER HUB
+      # 7. DEPLOY STAGING (DEVELOP)
       # =========================
-      - name: Login Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
-      # =========================
-      # 8. BUILD DA IMAGEM
-      # =========================
-      - name: Build imagem Docker
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/energia-api:${{ github.sha }} .
-          docker tag ${{ secrets.DOCKER_USERNAME }}/energia-api:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/energia-api:latest
-
-      # =========================
-      # 9. PUSH IMAGEM
-      # =========================
-      - name: Push imagem Docker
-        run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/energia-api:${{ github.sha }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/energia-api:latest
-
-      # =========================
-      # 10. DEPLOY STAGING (develop)
-      # =========================
-      - name: Deploy STAGING
+      - name: Deploy STAGING (VPS)
         if: github.ref == 'refs/heads/develop'
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -87,21 +65,14 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/energia-api:latest
-            docker stop energia-api || true
-            docker rm energia-api || true
-            docker run -d \
-              -p 8080:8080 \
-              --name energia-api \
-              -e DB_URL=${{ secrets.DB_URL_STAGING }} \
-              -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
-              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              ${{ secrets.DOCKER_USERNAME }}/energia-api:latest
+            cd /app/energia
+            git pull origin develop
+            docker compose up -d --build
 
       # =========================
-      # 11. DEPLOY PRODUÇÃO (main)
+      # 8. DEPLOY PRODUÇÃO (MAIN)
       # =========================
-      - name: Deploy PRODUÇÃO
+      - name: Deploy PRODUÇÃO (VPS)
         if: github.ref == 'refs/heads/main'
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -109,13 +80,6 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/energia-api:latest
-            docker stop energia-api || true
-            docker rm energia-api || true
-            docker run -d \
-              -p 8080:8080 \
-              --name energia-api \
-              -e DB_URL=${{ secrets.DB_URL_PROD }} \
-              -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
-              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              ${{ secrets.DOCKER_USERNAME }}/energia-api:latest
+            cd /app/energia
+            git pull origin main
+            docker compose up -d --build
