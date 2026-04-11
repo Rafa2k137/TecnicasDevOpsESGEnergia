@@ -18,7 +18,7 @@ services:
     volumes:
       - oracle-data:/opt/oracle/oradata
     networks:
-    - energia-net
+      - energia-net
 
   # API Spring Boot (Energia)
   energia-api:
