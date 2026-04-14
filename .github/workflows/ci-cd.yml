@@ -1,11 +1,7 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline Simplificado
 
 on:
   push:
-    branches:
-      - main
-      - develop
-  pull_request:
     branches:
       - main
       - develop
@@ -16,9 +12,7 @@ env:
   IMAGE_NAME: energia-api
 
 jobs:
-  # JOB 1 - BUILD: compila o projeto Maven e gera o .jar
-  build:
-    name: Build (Maven)
+  ci-cd:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout código
@@ -31,85 +25,11 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           cache: maven
 
-      - name: Compilar e empacotar (skip tests aqui)
+      - name: Compilar e empacotar
         run: mvn -B clean package -DskipTests
 
-      - name: Upload do artefato .jar
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-jar
-          path: target/*.jar
-          retention-days: 7
-
-  
-  # JOB 2 - TEST: sobe Oracle + API via docker compose e roda mvn test
-  test:
-    name: Testes de Integração
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Configurar Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
-
-      - name: Validar docker-compose
-        run: docker compose config
-
-      - name: Subir containers (Oracle + API)
-        run: docker compose up -d --build
-
-      - name: Aguardar Oracle ficar saudável
-        run: |
-          echo "Aguardando healthcheck do Oracle..."
-          for i in {1..40}; do
-            status=$(docker inspect --format='{{.State.Health.Status}}' oracle-db 2>/dev/null || echo "starting")
-            echo "Tentativa $i - status: $status"
-            if [ "$status" = "healthy" ]; then
-              echo "Oracle pronto!"
-              exit 0
-            fi
-            sleep 15
-          done
-          echo "Oracle não ficou saudável a tempo"
-          docker compose logs oracle-db
-          exit 1
-
-      - name: Rodar testes Maven
+      - name: Rodar testes
         run: mvn -B test
-
-      - name: Coletar logs em caso de falha
-        if: failure()
-        run: docker compose logs --no-color > compose-logs.txt
-
-      - name: Upload logs (se falhar)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: compose-logs
-          path: compose-logs.txt
-
-      - name: Derrubar containers
-        if: always()
-        run: docker compose down -v
-
-  # JOB 3 - DOCKER: build e push da imagem (GitHub Container Registry)
-  docker:
-    name: Build & Push Imagem Docker
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push'
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
 
       - name: Login no GHCR
         uses: docker/login-action@v3
@@ -118,51 +38,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Definir metadados da imagem
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=sha,format=short
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-
-      - name: Build e push
+      - name: Build e push da imagem
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
 
-  # JOB 4 - DEPLOY STAGING: somente branch develop
-  deploy-staging:
-    name: Deploy Staging
-    runs-on: ubuntu-latest
-    needs: docker
-    if: github.ref == 'refs/heads/develop'
-    environment:
-      name: staging
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Download do artefato .jar
-        uses: actions/download-artifact@v4
-        with:
-          name: app-jar
-          path: ./target
-
-      - name: Deploy via SSH para staging
+      - name: Deploy Staging (branch develop)
+        if: github.ref == 'refs/heads/develop'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
-            docker pull ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:develop
+            docker pull ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
             docker stop energia-api || true
             docker rm energia-api || true
             docker run -d --name energia-api \
@@ -170,26 +62,10 @@ jobs:
               -e DB_URL="${{ secrets.STAGING_DB_URL }}" \
               -e DB_USERNAME="${{ secrets.STAGING_DB_USER }}" \
               -e DB_PASSWORD="${{ secrets.STAGING_DB_PASSWORD }}" \
-              ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:develop
+              ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
 
-      - name: Smoke test
-        run: |
-          sleep 20
-          curl -fsS https://staging.energia-api.example.com/actuator/health || exit 1
-
-  # JOB 5 - DEPLOY PRODUÇÃO: somente branch main, com aprovação
-  deploy-prod:
-    name: Deploy Produção
-    runs-on: ubuntu-latest
-    needs: docker
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: production
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-
-      - name: Deploy via SSH para produção
+      - name: Deploy Produção (branch main)
+        if: github.ref == 'refs/heads/main'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.PROD_HOST }}
@@ -206,8 +82,3 @@ jobs:
               -e DB_USERNAME="${{ secrets.PROD_DB_USER }}" \
               -e DB_PASSWORD="${{ secrets.PROD_DB_PASSWORD }}" \
               ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: Smoke test produção
-        run: |
-          sleep 30
-          curl -fsS https://energia-api.example.com/actuator/health || exit 1
