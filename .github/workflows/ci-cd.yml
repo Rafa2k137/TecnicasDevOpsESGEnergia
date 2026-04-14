@@ -53,7 +53,6 @@ jobs:
 
 
       - name: Deploy Staging (branch develop)
-        if: github.ref == 'refs/heads/develop'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.STAGING_HOST }}
