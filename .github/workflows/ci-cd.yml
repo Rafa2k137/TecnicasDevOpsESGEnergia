@@ -10,6 +10,7 @@ env:
   JAVA_VERSION: '21'
   JAVA_DISTRIBUTION: 'temurin'
   IMAGE_NAME: energia-api
+  OWNER: rafa2k137  
 
 jobs:
   ci-cd:
@@ -44,7 +45,8 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner | toLowerCase }}/${{ env.IMAGE_NAME }}:latest
+          tags: ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
+
 
       - name: Deploy Staging (branch develop)
         if: github.ref == 'refs/heads/develop'
@@ -54,7 +56,7 @@ jobs:
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
-            docker pull ghcr.io/${{ github.repository_owner | toLowerCase }}/${{ env.IMAGE_NAME }}:latest
+            docker pull ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
             docker stop energia-api || true
             docker rm energia-api || true
             docker run -d --name energia-api \
@@ -62,7 +64,8 @@ jobs:
               -e DB_URL="${{ secrets.STAGING_DB_URL }}" \
               -e DB_USERNAME="${{ secrets.STAGING_DB_USER }}" \
               -e DB_PASSWORD="${{ secrets.STAGING_DB_PASSWORD }}" \
-              ghcr.io/${{ github.repository_owner | toLowerCase }}/${{ env.IMAGE_NAME }}:latest
+              ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
+
 
       - name: Deploy Produção (branch main)
         if: github.ref == 'refs/heads/main'
@@ -72,7 +75,7 @@ jobs:
           username: ${{ secrets.PROD_USER }}
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
-            docker pull ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+            docker pull ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
             docker stop energia-api || true
             docker rm energia-api || true
             docker run -d --name energia-api \
@@ -81,4 +84,4 @@ jobs:
               -e DB_URL="${{ secrets.PROD_DB_URL }}" \
               -e DB_USERNAME="${{ secrets.PROD_DB_USER }}" \
               -e DB_PASSWORD="${{ secrets.PROD_DB_PASSWORD }}" \
-              ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+              ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
