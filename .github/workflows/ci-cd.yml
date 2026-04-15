@@ -53,16 +53,17 @@ jobs:
 
 
       - name: Deploy Staging (branch develop)
+        if: github.ref == 'refs/heads/develop'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
+          password: ${{ secrets.STAGING_PASSWORD }}
           script: |
-            docker pull ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
-            docker stop energia-api || true
-            docker rm energia-api || true
-            docker run -d --name energia-api \
+              docker pull ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
+              docker stop energia-api || true
+              docker rm energia-api || true
+              docker run -d --name energia-api \
               -p 8080:8080 \
               -e DB_URL="${{ secrets.STAGING_DB_URL }}" \
               -e DB_USERNAME="${{ secrets.STAGING_DB_USER }}" \
@@ -71,20 +72,20 @@ jobs:
 
 
       - name: Deploy Produção (branch main)
-    if: github.ref == 'refs/heads/main'
-    uses: appleboy/ssh-action@v1.2.0
-    with:
-    host: ${{ secrets.PROD_HOST }}
-    username: ${{ secrets.PROD_USER }}
-    password: ${{ secrets.PROD_PASSWORD }}
-    script: |
-      docker pull ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
-      docker stop energia-api || true
-      docker rm energia-api || true
-      docker run -d --name energia-api \
-        --restart always \
-        -p 8080:8080 \
-        -e DB_URL="${{ secrets.PROD_DB_URL }}" \
-        -e DB_USERNAME="${{ secrets.PROD_DB_USER }}" \
-        -e DB_PASSWORD="${{ secrets.PROD_DB_PASSWORD }}" \
-        ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          password: ${{ secrets.PROD_PASSWORD }}
+          script: |
+            docker pull ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
+            docker stop energia-api || true
+            docker rm energia-api || true
+            docker run -d --name energia-api \
+            --restart always \
+            -p 8080:8080 \
+            -e DB_URL="${{ secrets.PROD_DB_URL }}" \
+            -e DB_USERNAME="${{ secrets.PROD_DB_USER }}" \
+            -e DB_PASSWORD="${{ secrets.PROD_DB_PASSWORD }}" \
+            ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
