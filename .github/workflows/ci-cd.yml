@@ -1,91 +1,171 @@
-name: CI/CD Pipeline Simplificado
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
       - main
       - develop
-      
-permissions:
-  contents: read
-  packages: write
 
 env:
-  JAVA_VERSION: '21'
-  JAVA_DISTRIBUTION: 'temurin'
-  IMAGE_NAME: energia-api
-  OWNER: rafa2k137  
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  ci-cd:
+  # ============================================
+  # JOB 1 — CI: Build e Testes
+  # ============================================
+  build-and-test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Configurar Java
         uses: actions/setup-java@v4
         with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          java-version: '21'
           cache: maven
 
-      - name: Compilar e empacotar
-        run: mvn -B clean package -DskipTests
+      - name: Validar docker-compose
+        run: docker compose config
 
-      - name: Rodar testes
-        run: mvn -B test
+      - name: Subir containers (banco Oracle para testes)
+        run: docker compose up -d oracle-db
 
-      - name: Login no GHCR
+      - name: Aguardar banco subir
+        run: |
+          echo "Aguardando Oracle ficar pronto..."
+          for i in $(seq 1 60); do
+            if docker exec oracle-db bash -c "echo 'SELECT 1 FROM DUAL;' | sqlplus -s RM559461/201104@localhost:1521/FREEPDB1" 2>/dev/null | grep -q "1"; then
+              echo "Oracle pronto!"
+              break
+            fi
+            echo "Tentativa $i/60..."
+            sleep 5
+          done
+
+      - name: Rodar testes Maven
+        run: mvn test
+
+      - name: Derrubar containers
+        if: always()
+        run: docker compose down
+
+  # ============================================
+  # JOB 2 — CD: Deploy para Staging
+  # ============================================
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    environment: staging
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Login no GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: rafa2k137
-          password: ${{ secrets.GHCR_PAT }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build e push da imagem
-        uses: docker/build-push-action@v6
+      - name: Extrair metadata (tags e labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=staging
+            type=sha,prefix=staging-
+
+      - name: Build e Push da imagem Docker (staging)
+        uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Verificar imagem no registry
+        run: |
+          echo "=========================================="
+          echo " DEPLOY STAGING CONCLUÍDO COM SUCESSO"
+          echo "=========================================="
+          echo ""
+          echo "Imagem publicada:"
+          echo "  ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging"
+          echo ""
+          echo "Para rodar localmente:"
+          echo "  docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging"
+          echo "  docker run -p 8080:8080 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging"
+          echo ""
+          echo "=========================================="
 
-      - name: Deploy Staging (branch develop)
-        if: github.ref == 'refs/heads/develop'
-        uses: appleboy/ssh-action@v1.2.0
+  # ============================================
+  # JOB 3 — CD: Deploy para Produção
+  # ============================================
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Login no GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          password: ${{ secrets.STAGING_PASSWORD }}
-          script: |
-              docker pull ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
-              docker stop energia-api || true
-              docker rm energia-api || true
-              docker run -d --name energia-api \
-              -p 8080:8080 \
-              -e DB_URL="${{ secrets.STAGING_DB_URL }}" \
-              -e DB_USERNAME="${{ secrets.STAGING_DB_USER }}" \
-              -e DB_PASSWORD="${{ secrets.STAGING_DB_PASSWORD }}" \
-              ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-
-      - name: Deploy Produção (branch main)
-        if: github.ref == 'refs/heads/main'
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Extrair metadata (tags e labels)
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          host: ${{ secrets.PROD_HOST }}
-          username: ${{ secrets.PROD_USER }}
-          password: ${{ secrets.PROD_PASSWORD }}
-          script: |
-            docker pull ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
-            docker stop energia-api || true
-            docker rm energia-api || true
-            docker run -d --name energia-api \
-            --restart always \
-            -p 8080:8080 \
-            -e DB_URL="${{ secrets.PROD_DB_URL }}" \
-            -e DB_USERNAME="${{ secrets.PROD_DB_USER }}" \
-            -e DB_PASSWORD="${{ secrets.PROD_DB_PASSWORD }}" \
-            ghcr.io/${{ env.OWNER }}/${{ env.IMAGE_NAME }}:latest
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=production
+            type=sha,prefix=prod-
+
+      - name: Build e Push da imagem Docker (produção)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Verificar imagem no registry
+        run: |
+          echo "=========================================="
+          echo " DEPLOY PRODUÇÃO CONCLUÍDO COM SUCESSO"
+          echo "=========================================="
+          echo ""
+          echo "Imagens publicadas:"
+          echo "  ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production"
+          echo "  ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          echo ""
+          echo "Para rodar em produção:"
+          echo "  docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          echo "  docker run -p 8080:8080 \\"
+          echo "    -e DB_URL=jdbc:oracle:thin:@seu-oracle:1521/FREEPDB1 \\"
+          echo "    -e DB_USERNAME=usuario \\"
+          echo "    -e DB_PASSWORD=senha \\"
+          echo "    ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          echo ""
+          echo "=========================================="
