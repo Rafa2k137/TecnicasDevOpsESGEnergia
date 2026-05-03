@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "number"
+    },
+    "consumo": {
+      "type": "number"
+    },
+    "fonte": {
+      "type": "string"
+    }
+  },
+  "required": ["id"]
+}
