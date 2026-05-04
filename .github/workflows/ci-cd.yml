@@ -47,7 +47,7 @@ jobs:
           done
 
       - name: Rodar testes Maven
-        run: cd app && mvn test
+        run: mvn test
 
       - name: Derrubar containers
         if: always()
