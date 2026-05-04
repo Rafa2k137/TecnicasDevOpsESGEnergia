@@ -123,7 +123,6 @@
 
 	<build>
 
-		<!-- ⚠️ MANTIDO apenas o que já estava correto (sem duplicar resources) -->
 		<sourceDirectory>app/src/main/java</sourceDirectory>
 		<testSourceDirectory>app/src/test/java</testSourceDirectory>
 
