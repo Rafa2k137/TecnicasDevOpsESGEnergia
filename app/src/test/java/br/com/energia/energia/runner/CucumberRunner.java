@@ -11,7 +11,7 @@ import static io.cucumber.junit.platform.engine.Constants.GLUE_PROPERTY_NAME;
 @IncludeEngines("cucumber")
 @SelectClasspathResource("features")
 @ConfigurationParameter(
-    key = GLUE_PROPERTY_NAME,
+    key = "cucumber.glue",
     value = "br.com.energia.energia.steps"
 )
 @ConfigurationParameter(
