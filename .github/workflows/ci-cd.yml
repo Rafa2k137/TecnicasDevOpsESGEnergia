@@ -47,7 +47,7 @@ jobs:
           done
 
       - name: Rodar testes Maven
-        run: mvn -f app/pom.xml test
+        run: mvn test
 
       - name: Derrubar containers
         if: always()
