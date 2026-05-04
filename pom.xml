@@ -122,6 +122,8 @@
 	</dependencies>
 
 	<build>
+		<sourceDirectory>app/src/main/java</sourceDirectory>
+    	<testSourceDirectory>app/src/test/java</testSourceDirectory>
 
 		<plugins>
 
