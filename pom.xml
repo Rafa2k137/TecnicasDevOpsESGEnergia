@@ -123,20 +123,6 @@
 
 	<build>
 
-		<sourceDirectory>app/src/main/java</sourceDirectory>
-
-		<resources>
-			<resource>
-				<directory>app/src/main/resources</directory>
-			</resource>
-		</resources>
-
-		<testResources>
-			<testResource>
-				<directory>app/src/test/resources</directory>
-			</testResource>
-		</testResources>
-
 		<plugins>
 
 			<plugin>
