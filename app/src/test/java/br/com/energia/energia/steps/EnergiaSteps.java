@@ -1,4 +1,4 @@
-package br.com.energia.steps;
+package br.com.energia.energia.steps;
 
 import io.cucumber.java.pt.*;
 import io.restassured.response.Response;
