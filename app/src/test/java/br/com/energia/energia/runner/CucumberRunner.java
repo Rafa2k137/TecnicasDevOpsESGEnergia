@@ -1,4 +1,4 @@
-package br.com.energia.runner;
+package br.com.energia.energia.runner;
 
 import org.junit.platform.suite.api.ConfigurationParameter;
 import org.junit.platform.suite.api.IncludeEngines;
