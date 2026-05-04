@@ -124,7 +124,6 @@
 	<build>
 
 		<sourceDirectory>app/src/main/java</sourceDirectory>
-		<testSourceDirectory>app/src/test/java</testSourceDirectory>
 
 		<resources>
 			<resource>
