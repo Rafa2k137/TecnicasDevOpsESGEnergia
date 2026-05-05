@@ -71,5 +71,7 @@ public class EnergiaSteps {
                 .body("{\"consumo\":50}")
             .when()
                 .post("/energia");
+
+         id = response.jsonPath().getInt("id");
     }
 }
